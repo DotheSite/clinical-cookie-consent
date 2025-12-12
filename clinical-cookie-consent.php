@@ -1,10 +1,14 @@
 <?php
 /**
  * Plugin Name: Clinical Cookie Consent
- * Description: Minimal cookie consent banner with strict controls for clinical sites.
- * Version: 1.0.1
- * Author: OpenAI
- * License: GPL2
+ * Description: A lightweight, style-controlled cookie consent banner with support for CSS variables and clean client-ready defaults.
+ * Version:     1.0.1
+ * Author:      Do The Site
+ * Author URI:  https://dothesite.com
+ * License:     GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: clinical-cookie-consent
+ * Domain Path: /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
