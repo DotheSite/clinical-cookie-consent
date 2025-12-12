@@ -18,7 +18,7 @@ This plugin is intentionally minimal, style-controlled, and supports CSS variabl
 ## Status
 This plugin is provided **as-is** for my own projects and client builds.
 
-It works and is actively used in production environments I control.
+It works and is actively used in production environments.
 I do **not** provide support, guarantees, or a public roadmap.
 
 Feel free to fork or adapt it for your own use.
