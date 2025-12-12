@@ -1,0 +1,130 @@
+#ccc-banner {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--ccc-width-desktop);
+  max-width: 100%;
+  background: var(--ccc-container-bg);
+  color: var(--ccc-container-text);
+  padding: 16px 18px;
+  border-radius: var(--ccc-container-radius);
+  font-family: inherit, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: none;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease-in-out, visibility 180ms ease-in-out;
+  border: 1px solid transparent;
+}
+
+#ccc-banner.ccc-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+#ccc-banner.ccc-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#ccc-banner .ccc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+#ccc-banner .ccc-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+#ccc-banner .ccc-close {
+  background: transparent;
+  border: none;
+  color: var(--ccc-container-text);
+  font-size: 18px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+#ccc-banner .ccc-message {
+  margin-bottom: 12px;
+}
+
+#ccc-banner .ccc-message p {
+  margin: 0 0 6px 0;
+}
+
+#ccc-banner .ccc-policy {
+  color: var(--ccc-policy-link);
+  text-decoration: underline;
+  transition: color 140ms ease-in-out;
+}
+
+#ccc-banner .ccc-policy:hover,
+#ccc-banner .ccc-policy:focus {
+  color: var(--ccc-policy-link-hover);
+}
+
+#ccc-banner .ccc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#ccc-banner .ccc-btn {
+  border: none;
+  border-radius: var(--ccc-button-radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit, "Helvetica Neue", Arial, sans-serif;
+  cursor: pointer;
+  transition: background-color 140ms ease-in-out, color 140ms ease-in-out;
+}
+
+#ccc-banner .ccc-btn.ccc-accept {
+  background: var(--ccc-accept-bg);
+  color: var(--ccc-accept-text);
+}
+
+#ccc-banner .ccc-btn.ccc-accept:hover,
+#ccc-banner .ccc-btn.ccc-accept:focus {
+  background: var(--ccc-accept-hover-bg);
+  color: var(--ccc-accept-hover-text);
+}
+
+#ccc-banner .ccc-btn.ccc-reject {
+  background: var(--ccc-reject-bg);
+  color: var(--ccc-reject-text);
+}
+
+#ccc-banner .ccc-btn.ccc-reject:hover,
+#ccc-banner .ccc-btn.ccc-reject:focus {
+  background: var(--ccc-reject-hover-bg);
+  color: var(--ccc-reject-hover-text);
+}
+
+#ccc-banner .ccc-btn.ccc-required {
+  background: var(--ccc-required-bg);
+  color: var(--ccc-required-text);
+}
+
+#ccc-banner .ccc-btn.ccc-required:hover,
+#ccc-banner .ccc-btn.ccc-required:focus {
+  background: var(--ccc-required-hover-bg);
+  color: var(--ccc-required-hover-text);
+}
+
+@media (max-width: 640px) {
+  #ccc-banner {
+    width: var(--ccc-width-mobile);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
