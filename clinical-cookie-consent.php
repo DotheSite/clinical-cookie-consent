@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Clinical Cookie Consent
  * Description: Minimal cookie consent banner with strict controls for clinical sites.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: OpenAI
  * License: GPL2
  */
@@ -356,9 +356,17 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
                         $attr
                     );
                     break;
+                case 'color':
+                    printf(
+                        '<input type="text" id="%1$s" name="%2$s[%1$s]" value="%3$s" class="regular-text" placeholder="#000000 or var(--color)"%4$s />',
+                        esc_attr( $field['id'] ),
+                        esc_attr( self::OPTION_NAME ),
+                        esc_attr( $value ),
+                        $attr
+                    );
+                    break;
                 case 'url':
                 case 'text':
-                case 'color':
                 default:
                     printf(
                         '<input type="%5$s" id="%1$s" name="%2$s[%1$s]" value="%3$s" class="regular-text"%4$s />',
@@ -417,9 +425,22 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
         }
 
         /**
-         * Basic hex color sanitization fallback.
+         * Color sanitization allowing hex, CSS variables, and color functions.
          */
         private function sanitize_color( $value, $default ) {
+            $value = trim( (string) $value );
+
+            // Allow CSS variable references such as var(--surface) or with fallbacks.
+            if ( preg_match( '/^var\([^\)]+\)$/', $value ) ) {
+                return $value;
+            }
+
+            // Allow common color functions (rgb/rgba/hsl/hsla).
+            if ( preg_match( '/^(rgb|rgba|hsl|hsla)\([^\)]+\)$/i', $value ) ) {
+                return $value;
+            }
+
+            // Allow shorthand and full hex colors.
             if ( preg_match( '/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $value ) ) {
                 return $value;
             }
@@ -459,7 +480,7 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
                 return;
             }
 
-            $version = '1.0.0';
+            $version = '1.0.1';
 
             wp_enqueue_style( 'ccc-frontend', plugins_url( 'assets/css/frontend.css', __FILE__ ), array(), $version );
             wp_enqueue_script( 'ccc-frontend', plugins_url( 'assets/js/frontend.js', __FILE__ ), array(), $version, true );
@@ -476,22 +497,22 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
 
             $css_vars = sprintf(
                 ':root{--ccc-container-bg:%1$s;--ccc-container-text:%2$s;--ccc-accept-bg:%3$s;--ccc-accept-text:%4$s;--ccc-accept-hover-bg:%5$s;--ccc-accept-hover-text:%6$s;--ccc-reject-bg:%7$s;--ccc-reject-text:%8$s;--ccc-reject-hover-bg:%9$s;--ccc-reject-hover-text:%10$s;--ccc-required-bg:%11$s;--ccc-required-text:%12$s;--ccc-required-hover-bg:%13$s;--ccc-required-hover-text:%14$s;--ccc-policy-link:%15$s;--ccc-policy-link-hover:%16$s;--ccc-container-radius:%17$s;--ccc-button-radius:%18$s;--ccc-width-desktop:%19$s;--ccc-width-mobile:%20$s;}',
-                esc_attr( $options['container_bg'] ),
-                esc_attr( $options['container_text'] ),
-                esc_attr( $options['accept_bg'] ),
-                esc_attr( $options['accept_text'] ),
-                esc_attr( $options['accept_hover_bg'] ),
-                esc_attr( $options['accept_hover_text'] ),
-                esc_attr( $options['reject_bg'] ),
-                esc_attr( $options['reject_text'] ),
-                esc_attr( $options['reject_hover_bg'] ),
-                esc_attr( $options['reject_hover_text'] ),
-                esc_attr( $options['required_bg'] ),
-                esc_attr( $options['required_text'] ),
-                esc_attr( $options['required_hover_bg'] ),
-                esc_attr( $options['required_hover_text'] ),
-                esc_attr( $options['policy_link'] ),
-                esc_attr( $options['policy_link_hover'] ),
+                $options['container_bg'],
+                $options['container_text'],
+                $options['accept_bg'],
+                $options['accept_text'],
+                $options['accept_hover_bg'],
+                $options['accept_hover_text'],
+                $options['reject_bg'],
+                $options['reject_text'],
+                $options['reject_hover_bg'],
+                $options['reject_hover_text'],
+                $options['required_bg'],
+                $options['required_text'],
+                $options['required_hover_bg'],
+                $options['required_hover_text'],
+                $options['policy_link'],
+                $options['policy_link_hover'],
                 esc_attr( $options['container_radius'] ),
                 esc_attr( $options['button_radius'] ),
                 esc_attr( $options['box_width_desktop'] ),
