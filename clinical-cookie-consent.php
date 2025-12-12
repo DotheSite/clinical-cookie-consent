@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Clinical Cookie Consent
+ * Plugin Name: Clinical Cookie Consent — because policy makers lost the plot
  * Description: A lightweight, style-controlled cookie consent banner with support for CSS variables and clean client-ready defaults.
  * Version:     1.0.1
  * Author:      Do The Site
@@ -47,7 +47,7 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
                 'required_hover_text' => '#ffffff',
                 'policy_link'         => '#93c5fd',
                 'policy_link_hover'   => '#bfdbfe',
-                'message'             => 'We use cookies to enhance your clinical experience. Please choose your preference.',
+                'message'             => 'We use cookies to enhance your experience. Please choose your preference.',
                 'expiration_days'     => 180,
                 'policy_url'          => '#',
             );
@@ -462,7 +462,7 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
 
             ?>
             <div class="wrap">
-                <h1><?php esc_html_e( 'Clinical Cookie Consent', 'clinical-cookie-consent' ); ?></h1>
+                <h1><?php esc_html_e( 'Cookie Consent', 'clinical-cookie-consent' ); ?></h1>
                 <form action="options.php" method="post">
                     <?php
                         settings_fields( 'ccc_settings' );
