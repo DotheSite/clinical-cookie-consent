@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CCC Blocking Test</title>
+  <style>
+    body { font-family: system-ui, Arial; padding: 24px; }
+    button { margin: 6px 0; }
+    #log { margin-top: 12px; padding: 8px; background:#f6f8fa; border:1px solid #e1e4e8 }
+  </style>
+</head>
+<body>
+  <h1>Clinical Cookie Consent — Blocking Test</h1>
+  <p>Simulates a header plugin adding a tracking script before consent, and the cookie plugin releasing it after consent.</p>
+
+  <button id="inject">Inject header plugin script (simulate early load)</button>
+  <button id="grant">Grant consent (dispatch accept)</button>
+  <button id="status">Show status</button>
+
+  <div id="log"></div>
+
+  <script>
+  (function(){
+    var logEl = document.getElementById('log');
+    function log(msg){ console.log(msg); logEl.innerHTML += '<div>'+msg+'</div>'; }
+
+    // Minimal robust blocker (same idea as plugin)
+    var consentGiven = false;
+    var blockedScripts = [];
+
+    function copyAttrs(el){
+      var a = {};
+      if (!el || !el.attributes) return a;
+      for (var i=0;i<el.attributes.length;i++){ a[el.attributes[i].name]=el.attributes[i].value }
+      if (el.__ccc_pending_src) a.src = el.__ccc_pending_src;
+      return a;
+    }
+
+    function replay(){
+      blockedScripts.forEach(function(item){
+        var s = document.createElement('script');
+        var attrs = item.attrs||{};
+        for (var k in attrs){ if (!Object.prototype.hasOwnProperty.call(attrs,k)) continue; if (k==='src'){ try{ s.src = attrs[k]; }catch(e){ s.setAttribute('src', attrs[k]); } } else { try{ s.setAttribute(k, attrs[k]); }catch(e){} } }
+        s.async = true;
+        document.head.appendChild(s);
+        log('Replayed script: '+attrs.src);
+      });
+      blockedScripts = [];
+    }
+
+    var origCreate = document.createElement.bind(document);
+    var origAppend = Element.prototype.appendChild;
+
+    document.createElement = function(tag){
+      var el = origCreate(tag);
+      if (String(tag).toLowerCase()==='script'){
+        try{
+          Object.defineProperty(el,'src',{
+            set: function(val){ if (!consentGiven){ this.__ccc_pending_src = val; return } if (origCreate) { try { HTMLScriptElement.prototype.src = val; } catch(e) {} } },
+            get: function(){ return this.__ccc_pending_src || (this.getAttribute && this.getAttribute('src')) || '' },
+            configurable: true
+          });
+        }catch(e){}
+        var origSet = el.setAttribute.bind(el);
+        el.setAttribute = function(name,val){ if (name==='src' && !consentGiven){ this.__ccc_pending_src = val; return } return origSet(name,val) };
+      }
+      return el;
+    };
+
+    Element.prototype.appendChild = function(child){
+      if (child && child.tagName && child.tagName.toLowerCase()==='script'){
+        var src = (child.getAttribute && child.getAttribute('src')) || child.__ccc_pending_src;
+        if (src && !consentGiven){ blockedScripts.push({ src: src, attrs: copyAttrs(child) }); log('Blocked script: '+src); return child }
+      }
+      return origAppend.call(this, child);
+    };
+
+    // UI handlers
+    document.getElementById('inject').addEventListener('click', function(){
+      // Simulate header plugin adding a script tag early
+      var s = document.createElement('script');
+      s.src = 'tracker.js';
+      s.async = true;
+      document.head.appendChild(s);
+      log('Header plugin attempted to inject tracker.js');
+    });
+
+    document.getElementById('grant').addEventListener('click', function(){
+      document.dispatchEvent(new CustomEvent('clinicalCookieConsentSaved',{detail:{status:'accept'}}));
+      consentGiven = true;
+      // restore appendChild for this test so further scripts behave normally
+      Element.prototype.appendChild = origAppend;
+      log('Consent granted (accept)');
+      replay();
+    });
+
+    document.getElementById('status').addEventListener('click', function(){
+      log('consentGiven='+consentGiven+'; queued='+blockedScripts.length);
+    });
+
+    // Expose for debugging
+    window.__ccc_test = { blockedScripts: blockedScripts };
+  })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Lightweight pre-commit hook for Clinical Cookie Consent
+# - Lints staged PHP files with `php -l`
+# - Optionally runs `eslint` on staged JS files if `eslint` is available
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "${staged_files}" ]; then
+  exit 0
+fi
+
+failed=0
+
+for file in ${staged_files}; do
+  case "${file}" in
+    *.php)
+      if ! php -l "${file}" >/dev/null 2>&1; then
+        echo "PHP syntax error: ${file}"
+        failed=1
+      fi
+      ;;
+    *.js)
+      if command -v eslint >/dev/null 2>&1; then
+        if ! eslint "${file}"; then
+          echo "ESLint failed: ${file}"
+          failed=1
+        fi
+      fi
+      ;;
+    *)
+      ;;
+  esac
+done
+
+if [ "${failed}" -ne 0 ]; then
+  echo "Pre-commit checks failed. Fix issues before committing."
+  exit 1
+fi
+
+exit 0

@@ -12,7 +12,12 @@
   const setCookie = (key, value, days) => {
     const expires = new Date();
     expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-    document.cookie = `${key}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+    let cookieStr = `${key}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+    // Add Secure flag when running on HTTPS so modern browsers accept the cookie
+    if (typeof location !== 'undefined' && location.protocol === 'https:') {
+      cookieStr += '; Secure';
+    }
+    document.cookie = cookieStr;
   };
 
   const getPreference = () => {

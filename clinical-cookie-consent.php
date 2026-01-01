@@ -58,6 +58,8 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
             add_action( 'admin_menu', array( $this, 'register_menu' ) );
             add_action( 'admin_init', array( $this, 'register_settings' ) );
             add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+            add_action( 'wp_head', array( $this, 'block_head_scripts' ), 1 ); // VERY EARLY
+            add_action( 'wp_footer', array( $this, 'conditional_scripts' ), 99 );
             add_action( 'wp_footer', array( $this, 'render_banner' ) );
         }
 
@@ -474,6 +476,193 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
             <?php
         }
 
+
+      public function conditional_scripts() {
+    $options = get_option( self::OPTION_NAME, self::defaults() );
+    
+    if ( empty( $options['enabled'] ) ) {
+        return;
+    }
+    ?>
+    <script>
+    (function() {
+        // Check consent status
+        var hasConsent = document.documentElement.classList.contains('ccc-status-accept');
+        
+        // Listen for consent changes
+        document.addEventListener('clinicalCookieConsentSaved', function(e) {
+            if (e.detail.status === 'accept') {
+                loadThirdPartyScripts();
+            }
+        });
+        
+        // Load on page load if already consented
+        if (hasConsent || (window.clinicalCookieConsent && window.clinicalCookieConsent.status === 'accept')) {
+            loadThirdPartyScripts();
+        }
+        
+        function loadThirdPartyScripts() {
+            // Only run once
+            if (window.cccScriptsLoaded) return;
+            window.cccScriptsLoaded = true;
+            
+            // === ADD YOUR TRACKING SCRIPTS HERE ===
+            
+        }
+    })();
+    </script>
+    <?php
+}  
+
+public function block_head_scripts() {
+    $options = get_option( self::OPTION_NAME, self::defaults() );
+    
+    if ( empty( $options['enabled'] ) ) {
+        return;
+    }
+    $plugin_script = esc_js( plugins_url( 'assets/js/frontend.js', __FILE__ ) );
+    ?>
+    <script>
+    (function() {
+        // Robust script blocker: intercepts script src property, setAttribute, and DOM insertion
+        var consentGiven = false;
+        var blockedScripts = [];
+        var allowedUrls = [ '<?php echo $plugin_script; ?>' ]; // plugin script is always allowed
+
+        function isAllowedSrc(src, el) {
+            if (!src) return false;
+            try {
+                // data-ccc-allow attribute opt-in for other plugins
+                if (el && el.getAttribute && el.getAttribute('data-ccc-allow') === '1') return true;
+            } catch (e) {}
+            // exact match or startsWith match for known allowed URLs
+            for (var i = 0; i < allowedUrls.length; i++) {
+                try {
+                    if (src === allowedUrls[i] || src.indexOf(allowedUrls[i]) === 0) return true;
+                } catch (e) {}
+            }
+            return false;
+        }
+
+        // immediate consent check from cookie
+        var cookieMatch = document.cookie.match(/ccc_choice=([^;]+)/);
+        if (cookieMatch && cookieMatch[1] === 'accept') {
+            consentGiven = true;
+        }
+
+        var originalCreateElement = document.createElement.bind(document);
+        var originalAppendChild = Element.prototype.appendChild;
+        var originalInsertBefore = Element.prototype.insertBefore;
+        var originalDefine = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+
+        function copyAttributes(srcEl) {
+            var attrs = {};
+            if (!srcEl || !srcEl.attributes) return attrs;
+            for (var i = 0; i < srcEl.attributes.length; i++) {
+                var a = srcEl.attributes[i];
+                attrs[a.name] = a.value;
+            }
+            if (srcEl.__ccc_pending_src) attrs.src = srcEl.__ccc_pending_src;
+            return attrs;
+        }
+
+        function replayBlocked() {
+            blockedScripts.forEach(function(item) {
+                var s = document.createElement('script');
+                var attrs = item.attrs || {};
+                for (var k in attrs) {
+                    if (!Object.prototype.hasOwnProperty.call(attrs, k)) continue;
+                    if (k === 'src') {
+                        try { s.src = attrs[k]; } catch (e) { s.setAttribute('src', attrs[k]); }
+                    } else {
+                        try { s.setAttribute(k, attrs[k]); } catch (e) {}
+                    }
+                }
+                // Keep as async to avoid blocking page
+                s.async = true;
+                document.head.appendChild(s);
+            });
+            blockedScripts = [];
+        }
+
+        // Replace createElement to trap script property/setAttribute usage
+        document.createElement = function(tagName) {
+            var el = originalCreateElement(tagName);
+            if (String(tagName).toLowerCase() === 'script') {
+                try {
+                    // intercept property setter for src
+                    Object.defineProperty(el, 'src', {
+                        set: function(val) {
+                            if (!consentGiven && !isAllowedSrc(val, this)) {
+                                this.__ccc_pending_src = val;
+                                return;
+                            }
+                            if (originalDefine && originalDefine.set) {
+                                originalDefine.set.call(this, val);
+                            } else {
+                                this.setAttribute('src', val);
+                            }
+                        },
+                        get: function() {
+                            return (this.__ccc_pending_src) ? this.__ccc_pending_src : (originalDefine && originalDefine.get ? originalDefine.get.call(this) : this.getAttribute('src'));
+                        },
+                        configurable: true
+                    });
+                } catch (e) {}
+
+                var origSetAttr = el.setAttribute.bind(el);
+                el.setAttribute = function(name, value) {
+                    if (name === 'src') {
+                        if (!consentGiven && !isAllowedSrc(value, this)) {
+                            this.__ccc_pending_src = value;
+                            return;
+                        }
+                    }
+                    return origSetAttr(name, value);
+                };
+            }
+            return el;
+        };
+
+        // Intercept DOM insertion to queue external scripts
+        Element.prototype.appendChild = function(child) {
+            if (child && child.tagName && child.tagName.toLowerCase() === 'script') {
+                var src = (child.getAttribute && child.getAttribute('src')) || child.__ccc_pending_src;
+                if (src && !consentGiven && !isAllowedSrc(src, child)) {
+                    blockedScripts.push({ src: src, attrs: copyAttributes(child) });
+                    return child; // drop it from DOM for now
+                }
+            }
+            return originalAppendChild.call(this, child);
+        };
+
+        Element.prototype.insertBefore = function(newNode, referenceNode) {
+            if (newNode && newNode.tagName && newNode.tagName.toLowerCase() === 'script') {
+                var src = (newNode.getAttribute && newNode.getAttribute('src')) || newNode.__ccc_pending_src;
+                if (src && !consentGiven && !isAllowedSrc(src, newNode)) {
+                    blockedScripts.push({ src: src, attrs: copyAttributes(newNode) });
+                    return newNode;
+                }
+            }
+            return originalInsertBefore.call(this, newNode, referenceNode);
+        };
+
+        // Listen for consent and release blocked scripts
+        document.addEventListener('clinicalCookieConsentSaved', function(e) {
+            if (e.detail && e.detail.status === 'accept') {
+                consentGiven = true;
+                // restore originals
+                try { document.createElement = originalCreateElement; } catch (e) {}
+                try { Element.prototype.appendChild = originalAppendChild; } catch (e) {}
+                try { Element.prototype.insertBefore = originalInsertBefore; } catch (e) {}
+                replayBlocked();
+            }
+        });
+
+    })();
+    </script>
+    <?php
+}
         /**
          * Enqueues frontend CSS/JS when enabled.
          */
