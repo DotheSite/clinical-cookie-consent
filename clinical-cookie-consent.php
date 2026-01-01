@@ -474,10 +474,8 @@ if ( ! class_exists( 'ClinicalCookieConsent' ) ) {
                 </form>
             </div>
             <?php
-        }
-
-
-      public function conditional_scripts() {
+                }
+            public function conditional_scripts() {
     $options = get_option( self::OPTION_NAME, self::defaults() );
     
     if ( empty( $options['enabled'] ) ) {
@@ -527,7 +525,11 @@ public function block_head_scripts() {
         // Robust script blocker: intercepts script src property, setAttribute, and DOM insertion
         var consentGiven = false;
         var blockedScripts = [];
-        var allowedUrls = [ '<?php echo $plugin_script; ?>' ]; // plugin script is always allowed
+        var allowedUrls = [
+            '<?php echo $plugin_script; ?>',
+            '<?php echo esc_js( includes_url( "js/" ) ); ?>',
+            '<?php echo esc_js( admin_url( "js/" ) ); ?>'
+        ]; // plugin script and common WP JS dirs are allowed
 
         function isAllowedSrc(src, el) {
             if (!src) return false;
@@ -535,10 +537,20 @@ public function block_head_scripts() {
                 // data-ccc-allow attribute opt-in for other plugins
                 if (el && el.getAttribute && el.getAttribute('data-ccc-allow') === '1') return true;
             } catch (e) {}
+
+            // Allow same-origin scripts (relative URLs or absolute with same origin)
+            try {
+                var resolved = new URL(src, location.href);
+                if (resolved.origin === location.origin) return true;
+            } catch (e) {}
+
             // exact match or startsWith match for known allowed URLs
             for (var i = 0; i < allowedUrls.length; i++) {
                 try {
                     if (src === allowedUrls[i] || src.indexOf(allowedUrls[i]) === 0) return true;
+                    // also compare absolute form in case allowedUrls entries are absolute
+                    var absAllowed = new URL(allowedUrls[i], location.href).href;
+                    if (src === absAllowed || src.indexOf(absAllowed) === 0) return true;
                 } catch (e) {}
             }
             return false;
